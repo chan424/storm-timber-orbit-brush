@@ -1,0 +1,36 @@
+{
+  "url": "http://127.0.0.1:8080/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "DAA RGUKT ONGOLE LAB EVALUATION PORTAL",
+      "hasCanvas": false,
+      "bodyTextLen": 51,
+      "bodyTextHash": "aff9c59159194031c3b8126447045ccf31e3f34e1256f917caa180921c6de1f3",
+      "bodyTextPrefix": "RGUKT ONGOLE DAA RGUKT ONGOLE LAB EVALUATION PORTAL",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "DAA RGUKT ONGOLE LAB EVALUATION PORTAL",
+      "hasCanvas": false,
+      "bodyTextLen": 51,
+      "bodyTextHash": "aff9c59159194031c3b8126447045ccf31e3f34e1256f917caa180921c6de1f3",
+      "bodyTextPrefix": "RGUKT ONGOLE DAA RGUKT ONGOLE LAB EVALUATION PORTAL",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-preview.json"
+}

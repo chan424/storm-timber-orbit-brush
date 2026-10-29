@@ -1,0 +1,1 @@
+import{t as e}from"./portal-home-D-iwl2JU.js";var t=e;export{t as component};

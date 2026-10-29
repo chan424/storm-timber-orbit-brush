@@ -1,0 +1,1 @@
+import{n as e,t}from"./portal-home-D-iwl2JU.js";import{i as n,r}from"./index-B5KwowY8.js";var i=n();function a(){let{user:n,isPending:a}=e();return a?(0,i.jsx)(t,{}):n?(0,i.jsx)(r,{to:`/`}):(0,i.jsx)(t,{})}export{a as component};
