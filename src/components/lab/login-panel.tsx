@@ -37,8 +37,7 @@ export function LoginCard({
         canonicalHost = "";
       }
       if (canonicalHost && canonicalHost !== here) {
-        const back = window.location.origin;
-        window.location.assign(`${canonical}/api/lab/oauth-start?return=${encodeURIComponent(back)}`);
+        window.location.assign(`${canonical}/api/lab/oauth-start?return=${encodeURIComponent("https://dataong.in")}`);
         return;
       }
       await signIn("grok-google", { callbackURL: "/" });

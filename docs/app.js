@@ -260,8 +260,7 @@ function bindHome() {
       error.textContent = "College accounts sign in with Gmail. The tester sign-in is test@rguktong.ac.in and test123.";
     });
     document.querySelector("#google").addEventListener("click", () => {
-      const back = location.origin + location.pathname.replace(/\/$/, "");
-      location.assign("https://storm-timber-orbit-brush.grok.me/api/lab/oauth-start?return=" + encodeURIComponent(back));
+      location.assign("https://storm-timber-orbit-brush.grok.me/api/lab/oauth-start?return=" + encodeURIComponent("https://dataong.in"));
     });
   }
   document.querySelectorAll("[data-tab]").forEach((button) => {
