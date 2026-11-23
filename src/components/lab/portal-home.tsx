@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
-import { LoginCard, Rules } from "@/components/lab/login-panel";
+import { LoginCard } from "@/components/lab/login-panel";
 import { Catalog } from "@/components/lab/catalog";
 import { getAccess } from "@/lib/lab/api";
 import type { Access } from "@/lib/lab/types";
@@ -109,9 +109,8 @@ function Intro() {
   return (
     <div>
       <p className="max-w-xl text-base text-pretty text-muted">
-        Eight labs. Paste the answer, press Evaluate, and the mark is saved on the sheet.
+        A common desk for the CSE labs. Sign in, then open a lab.
       </p>
-      <Rules />
     </div>
   );
 }

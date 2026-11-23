@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "@tanstack/react-router";
-import { labProgress, listLabs, saveLab } from "@/lib/lab/labs-api";
+import { listLabs, saveLab } from "@/lib/lab/labs-api";
 import type { LabDef } from "@/lib/lab/catalog";
 import type { Lang } from "@/lib/lab/types";
 
@@ -13,7 +13,6 @@ const LANGS: { id: Lang; label: string }[] = [
 
 export function Catalog({ role }: { role: "admin" | "student" | null }) {
   const [labs, setLabs] = useState<LabDef[]>([]);
-  const [earned, setEarned] = useState<Record<string, number>>({});
   const [editing, setEditing] = useState<string | null>(null);
   const [error, setError] = useState("");
 
@@ -26,16 +25,6 @@ export function Catalog({ role }: { role: "admin" | "student" | null }) {
       .catch((err: unknown) => {
         if (!cancelled) setError(err instanceof Error ? err.message : "Could not load the labs.");
       });
-    if (role) {
-      labProgress()
-        .then((rows) => {
-          if (cancelled) return;
-          const next: Record<string, number> = {};
-          for (const row of rows) next[row.slug] = row.earned;
-          setEarned(next);
-        })
-        .catch(() => undefined);
-    }
     return () => {
       cancelled = true;
     };
@@ -45,7 +34,7 @@ export function Catalog({ role }: { role: "admin" | "student" | null }) {
     <section className="mt-10">
       <div className="flex items-end justify-between gap-4">
         <h2 className="font-serif text-2xl font-semibold">Labs</h2>
-        <p className="text-sm text-muted">Five experiments, 10 marks each.</p>
+        {role === "admin" ? <p className="text-sm text-muted">Use Edit to change a lab.</p> : null}
       </div>
       {error ? <p className="mt-3 text-sm text-danger">{error}</p> : null}
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -56,11 +45,7 @@ export function Catalog({ role }: { role: "admin" | "student" | null }) {
                 <p className="font-mono text-xs font-medium tracking-wide text-accent uppercase">{lab.code}</p>
                 <h3 className="mt-1 font-serif text-xl font-semibold text-balance">{lab.title}</h3>
               </div>
-              {role ? (
-                <p className="font-mono text-sm tabular-nums text-muted">{earned[lab.slug] ?? 0}/50</p>
-              ) : null}
             </div>
-            <p className="mt-2 text-sm text-pretty text-muted">{lab.blurb}</p>
             <div className="mt-4 flex flex-wrap gap-2">
               <Link
                 to="/lab/$slug"
