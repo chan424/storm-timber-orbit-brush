@@ -53,11 +53,11 @@ export function LoginCard({
     setError("");
     const nextEmail = email.trim().toLowerCase();
     if (!roleForEmail(nextEmail)) {
-      setError(`Use a student ID such as o234747@rguktong.ac.in, or ${ADMIN_EMAIL} for the evaluation cell.`);
+      setError(`Use a college ID such as o234747@rguktong.ac.in (o21, o22, or o23), or ${ADMIN_EMAIL} for the admin.`);
       return;
     }
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+    if (password.length < 7) {
+      setError("Password must be at least 7 characters.");
       return;
     }
     setPending(true);
@@ -98,7 +98,7 @@ export function LoginCard({
     <div className="rounded-xl border border-line bg-sheet p-5 sm:p-6">
       <h2 className="font-serif text-2xl font-semibold text-balance">Sign in</h2>
       <p className="mt-2 text-sm text-pretty text-muted">
-        Students sign in with their college Google account, the one ending in @rguktong.ac.in. The evaluation cell can use {ADMIN_EMAIL}.
+        College Google accounts ending in @rguktong.ac.in can sign in when the ID starts with o21, o22, or o23. The admin is {ADMIN_EMAIL}. Testers can use test@rguktong.ac.in.
       </p>
       {signedInAs ? (
         <p className="mt-4 rounded-md bg-warn-soft px-3 py-2 text-sm text-warn" role="status">
@@ -140,7 +140,7 @@ export function LoginCard({
             type="password"
             autoComplete={mode === "up" ? "new-password" : "current-password"}
             required
-            minLength={8}
+            minLength={7}
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             className="mt-1 h-11 w-full rounded-md border border-line bg-sheet px-3 text-base text-ink outline-none"

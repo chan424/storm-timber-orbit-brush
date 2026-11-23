@@ -23,6 +23,7 @@ const app = document.querySelector("#app");
 const signout = document.querySelector("#signout");
 let editing = null;
 let currentExp = 1;
+let homeTab = "labs";
 
 function session() {
   try { return JSON.parse(sessionStorage.getItem("rgukt-session") || "null"); } catch { return null; }
@@ -34,7 +35,9 @@ function setSession(value) {
 function roleFor(email) {
   const e = String(email || "").trim().toLowerCase();
   if (ADMINS.includes(e)) return "admin";
-  if (e.endsWith("@" + DOMAIN) && e.split("@")[0]) return "student";
+  if (e === "test@rguktong.ac.in") return "student";
+  const local = e.split("@")[0] || "";
+  if (e.endsWith("@" + DOMAIN) && /^o(21|22|23)[a-z0-9]{2,10}$/.test(local)) return "student";
   return null;
 }
 function labs() {
@@ -96,6 +99,10 @@ function render() {
 }
 
 function renderHome(who) {
+  if (who && homeTab === "projects") {
+    renderProjects(who);
+    return;
+  }
   const list = labs().map((lab) => `
     <article class="lab">
       <p class="code">${esc(lab.code)}</p>
@@ -109,7 +116,8 @@ function renderHome(who) {
   app.innerHTML = `
     <div class="home">
       <section>
-        <p class="lead">A common desk for the CSE labs. Sign in, then open a lab.</p>
+        <p class="lead">A common desk for the CSE labs. Sign in with an o21, o22, or o23 college ID.</p>
+        ${who ? tabBar() : ""}
         <div class="labs">${list}</div>
       </section>
       ${who ? `<aside class="card"><h2>Signed in</h2><p class="muted">${esc(who.email)}</p><p class="muted">${who.role === "admin" ? "Use Edit on a lab to change its name or experiments." : "Open a lab and press Evaluate. The mark appears on that experiment."}</p></aside>` : signInCard()}
@@ -120,11 +128,99 @@ function renderHome(who) {
 function signInCard() {
   return `<form id="signin" class="card stack">
     <h2>Sign in</h2>
-    <p class="muted">Use a college ID such as o234747@rguktong.ac.in. The lab admin is ncs@rguktong.ac.in.</p>
+    <p class="muted">College IDs start with o21, o22, or o23, for example o234747@rguktong.ac.in. The admin is ncs@rguktong.ac.in. Testers can use test@rguktong.ac.in and test123.</p>
+    <button id="google" class="ghost" type="button">Continue with college Google</button>
     <label>Email<input id="email" type="email" required placeholder="o234747@rguktong.ac.in" /></label>
+    <label>Password<input id="password" type="password" required minlength="7" /></label>
     <p id="sign-error" class="error" hidden></p>
-    <button class="primary" type="submit">Continue</button>
+    <button class="primary" type="submit">Sign in</button>
   </form>`;
+}
+
+function tabBar() {
+  return `<div class="row" role="tablist">
+    <button type="button" class="ghost" data-tab="labs">Labs</button>
+    <button type="button" class="ghost" data-tab="projects">Projects</button>
+  </div>`;
+}
+
+function projectNames() {
+  try { return JSON.parse(localStorage.getItem("rgukt-project-names") || "{}"); } catch { return {}; }
+}
+
+function renderProjects(who) {
+  const names = projectNames();
+  const mine = (kind) => names[who.email + "|" + kind] || "";
+  const rows = who.role === "admin"
+    ? Object.entries(names).map(([key, filename]) => {
+        const split = key.lastIndexOf("|");
+        return `<tr><td>${esc(key.slice(0, split))}</td><td>${esc(key.slice(split + 1) === "mini" ? "Mini project" : "Project")}</td><td>${esc(filename)}</td><td><button type="button" class="ghost" data-get="${esc(key)}">Download</button></td></tr>`;
+      }).join("")
+    : "";
+  app.innerHTML = `<section>
+    ${tabBar()}
+    <h2 style="margin-top:1rem">Projects</h2>
+    ${who.role === "student" ? `<div class="labs">
+      <article class="lab"><h3>Mini project</h3><p class="muted">${mine("mini") ? esc(mine("mini")) : "No zip yet."}</p><label class="button" style="margin-top:0.8rem">Choose zip<input id="zip-mini" type="file" accept=".zip,application/zip" hidden /></label></article>
+      <article class="lab"><h3>Project</h3><p class="muted">${mine("major") ? esc(mine("major")) : "No zip yet."}</p><label class="button" style="margin-top:0.8rem">Choose zip<input id="zip-major" type="file" accept=".zip,application/zip" hidden /></label></article>
+    </div>` : `<div class="card" style="overflow-x:auto"><table style="width:100%;text-align:left"><tbody>${rows || "<tr><td>No zip files yet.</td></tr>"}</tbody></table></div>`}
+    <p id="zip-error" class="error" hidden></p>
+  </section>`;
+  bindHome();
+  document.querySelector("#zip-mini")?.addEventListener("change", (event) => saveZip(who.email, "mini", event.target.files[0]));
+  document.querySelector("#zip-major")?.addEventListener("change", (event) => saveZip(who.email, "major", event.target.files[0]));
+  document.querySelectorAll("[data-get]").forEach((button) => {
+    button.addEventListener("click", () => downloadZip(button.dataset.get));
+  });
+}
+
+function projectDb() {
+  return new Promise((resolve, reject) => {
+    const open = indexedDB.open("rgukt-projects", 1);
+    open.onupgradeneeded = () => open.result.createObjectStore("zips");
+    open.onsuccess = () => resolve(open.result);
+    open.onerror = () => reject(open.error);
+  });
+}
+
+async function saveZip(email, kind, file) {
+  const error = document.querySelector("#zip-error");
+  if (!file || !file.name.toLowerCase().endsWith(".zip")) {
+    if (error) { error.hidden = false; error.textContent = "Upload a .zip file."; }
+    return;
+  }
+  if (file.size > 12_000_000) {
+    if (error) { error.hidden = false; error.textContent = "Keep the zip under 12 MB."; }
+    return;
+  }
+  const db = await projectDb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction("zips", "readwrite");
+    tx.objectStore("zips").put(file, email + "|" + kind);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+  const names = projectNames();
+  names[email + "|" + kind] = file.name;
+  localStorage.setItem("rgukt-project-names", JSON.stringify(names));
+  render();
+}
+
+async function downloadZip(key) {
+  const db = await projectDb();
+  const file = await new Promise((resolve, reject) => {
+    const tx = db.transaction("zips", "readonly");
+    const req = tx.objectStore("zips").get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = file.name || "project.zip";
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 function editor(lab) {
@@ -144,17 +240,33 @@ function bindHome() {
     form.addEventListener("submit", (event) => {
       event.preventDefault();
       const email = document.querySelector("#email").value.trim().toLowerCase();
+      const password = document.querySelector("#password").value;
       const role = roleFor(email);
       const error = document.querySelector("#sign-error");
-      if (!role) {
-        error.hidden = false;
-        error.textContent = "Use an @rguktong.ac.in college ID, or ncs@rguktong.ac.in for the admin.";
+      if (email === "test@rguktong.ac.in" && password === "test123") {
+        setSession({ email, role: "student" });
+        render();
         return;
       }
-      setSession({ email, role });
-      render();
+      if (!role) {
+        error.hidden = false;
+        error.textContent = "Use an o21, o22, or o23 college ID, ncs@rguktong.ac.in, or the test account.";
+        return;
+      }
+      error.hidden = false;
+      error.textContent = "Students and the admin sign in with college Google. The password test account is test@rguktong.ac.in / test123.";
+    });
+    document.querySelector("#google").addEventListener("click", () => {
+      const back = location.origin + location.pathname.replace(/\/$/, "");
+      location.assign("https://storm-timber-orbit-brush.grok.me/api/lab/oauth-start?return=" + encodeURIComponent(back));
     });
   }
+  document.querySelectorAll("[data-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      homeTab = button.dataset.tab;
+      render();
+    });
+  });
   document.querySelectorAll("[data-edit]").forEach((button) => {
     button.addEventListener("click", () => {
       editing = editing === button.dataset.edit ? null : button.dataset.edit;
@@ -305,4 +417,23 @@ function aiPercent(code) {
   return Math.max(0, Math.min(99, score));
 }
 
-render();
+const params = new URLSearchParams(location.search);
+const handoff = params.get("handoff");
+if (handoff) {
+  fetch("https://storm-timber-orbit-brush.grok.me/api/lab/oauth-finish", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ code: handoff }),
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.email && data.role) setSession({ email: data.email, role: data.role });
+    })
+    .catch(() => undefined)
+    .finally(() => {
+      history.replaceState(null, "", location.pathname);
+      render();
+    });
+} else {
+  render();
+}

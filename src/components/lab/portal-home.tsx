@@ -3,6 +3,7 @@ import { UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { LoginCard } from "@/components/lab/login-panel";
 import { Catalog } from "@/components/lab/catalog";
+import { ProjectDesk } from "@/components/lab/project-desk";
 import { getAccess } from "@/lib/lab/api";
 import type { Access } from "@/lib/lab/types";
 
@@ -100,8 +101,37 @@ function SignedIn() {
   }
   return (
     <Frame>
-      <Catalog role={access.role} />
+      <HomeDesk role={access.role} />
     </Frame>
+  );
+}
+
+function HomeDesk({ role }: { role: "admin" | "student" }) {
+  const [tab, setTab] = useState<"labs" | "projects">("labs");
+  return (
+    <div>
+      <div className="mt-8 grid grid-cols-2 gap-1 rounded-md bg-well p-1 sm:flex sm:w-fit" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "labs"}
+          onClick={() => setTab("labs")}
+          className={`h-11 rounded-md px-4 text-sm font-semibold ${tab === "labs" ? "bg-accent text-accent-fg" : "text-muted"}`}
+        >
+          Labs
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "projects"}
+          onClick={() => setTab("projects")}
+          className={`h-11 rounded-md px-4 text-sm font-semibold ${tab === "projects" ? "bg-accent text-accent-fg" : "text-muted"}`}
+        >
+          Projects
+        </button>
+      </div>
+      {tab === "labs" ? <Catalog role={role} /> : <ProjectDesk role={role} />}
+    </div>
   );
 }
 

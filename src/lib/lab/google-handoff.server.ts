@@ -1,7 +1,9 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { auth, SESSION_TOKEN_COOKIE } from "@/lib/auth/server";
+import { normalizeEmail, roleForEmail } from "@/lib/lab/access";
 
 const RETURN_ORIGINS = new Set(["https://dataong.in", "https://www.dataong.in"]);
+const PAGES_SITE = "https://chan424.github.io/storm-timber-orbit-brush";
 
 export function canonicalOrigin(): string | null {
   const raw = process.env.BETTER_AUTH_URL?.trim();
@@ -19,8 +21,13 @@ export function allowedReturn(raw: string | null): string | null {
   if (!raw) return null;
   try {
     const url = new URL(raw);
-    if (!RETURN_ORIGINS.has(url.origin)) return null;
-    return url.origin;
+    if (RETURN_ORIGINS.has(url.origin)) {
+      if (url.pathname !== "/" && url.pathname !== "") return null;
+      return url.origin;
+    }
+    const path = url.pathname.replace(/\/$/, "");
+    if (`${url.origin}${path}` === PAGES_SITE) return PAGES_SITE;
+    return null;
   } catch {
     return null;
   }
@@ -99,12 +106,16 @@ export async function claimGoogle(request: Request): Promise<Response> {
   } catch {
     code = "";
   }
-  if (!/^[A-Za-z0-9_-]{20,128}$/.test(code)) return new Response("Missing code", { status: 400 });
+  if (!/^[A-Za-z0-9_-]{20,128}$/.test(code)) return cors(request, new Response("Missing code", { status: 400 }));
   const origin = request.headers.get("origin") ?? "";
   const host = requestHost(request);
   const onCollegeSite =
-    RETURN_ORIGINS.has(origin) || host === "dataong.in" || host === "www.dataong.in";
-  if (!onCollegeSite) return new Response("Wrong host", { status: 400 });
+    RETURN_ORIGINS.has(origin) ||
+    origin === "https://chan424.github.io" ||
+    host === "dataong.in" ||
+    host === "www.dataong.in" ||
+    host === "chan424.github.io";
+  if (!onCollegeSite) return cors(request, new Response("Wrong host", { status: 400 }));
   const { getSql } = await import("@/lib/db");
   const sql = await getSql();
   const rows = await sql<{ value: string; expiresAt?: string | Date; expiresat?: string | Date }>`
@@ -115,8 +126,14 @@ export async function claimGoogle(request: Request): Promise<Response> {
   const row = rows[0];
   const expiresAt = row ? new Date(row.expiresAt ?? row.expiresat ?? 0).getTime() : 0;
   if (!row || !Number.isFinite(expiresAt) || expiresAt < Date.now() || /[\s;,]/.test(row.value)) {
-    return new Response("This Google sign-in expired. Try again.", { status: 400 });
+    return cors(request, new Response("This Google sign-in expired. Try again.", { status: 400 }));
   }
+  const session = await auth.api.getSession({
+    headers: new Headers({ cookie: `${SESSION_TOKEN_COOKIE}=${row.value}` }),
+  });
+  const email = normalizeEmail(session?.user?.email ?? "");
+  const role = roleForEmail(email);
+  if (!role) return cors(request, new Response("Use an o21, o22, or o23 college account.", { status: 403 }));
   const headers = new Headers({
     "content-type": "application/json",
     "cache-control": "no-store",
@@ -126,5 +143,15 @@ export async function claimGoogle(request: Request): Promise<Response> {
     "set-cookie",
     `${SESSION_TOKEN_COOKIE}=${row.value}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=604800`,
   );
-  return new Response(JSON.stringify({ ok: true }), { status: 200, headers });
+  return cors(request, new Response(JSON.stringify({ ok: true, email, role }), { status: 200, headers }));
+}
+
+function cors(request: Request, response: Response): Response {
+  const origin = request.headers.get("origin") ?? "";
+  if (origin !== "https://chan424.github.io" && !RETURN_ORIGINS.has(origin)) return response;
+  const headers = new Headers(response.headers);
+  headers.set("access-control-allow-origin", origin);
+  headers.set("access-control-allow-headers", "content-type");
+  headers.set("vary", "origin");
+  return new Response(response.body, { status: response.status, headers });
 }

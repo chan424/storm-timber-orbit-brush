@@ -42,6 +42,8 @@ async function mergedLabs(): Promise<LabDef[]> {
 }
 
 export const listLabs = createServerFn({ method: "GET" }).handler(async (): Promise<LabDef[]> => {
+  const { ensureTestAccount } = await import("@/lib/lab/test-account.server");
+  await ensureTestAccount().catch(() => undefined);
   return mergedLabs();
 });
 

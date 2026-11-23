@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ApiProjectZipRouteImport } from './routes/api/project-zip'
 import { Route as ApiVivaVideoRouteImport } from './routes/api/viva-video'
 import { Route as LabSlugRouteImport } from './routes/lab/$slug'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -27,6 +28,11 @@ const IndexRoute = IndexRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiProjectZipRoute = ApiProjectZipRouteImport.update({
+  id: '/api/project-zip',
+  path: '/api/project-zip',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiVivaVideoRoute = ApiVivaVideoRouteImport.update({
@@ -68,6 +74,7 @@ const ApiLabOauthStartRoute = ApiLabOauthStartRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/api/project-zip': typeof ApiProjectZipRoute
   '/api/viva-video': typeof ApiVivaVideoRoute
   '/lab/$slug': typeof LabSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -79,6 +86,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/api/project-zip': typeof ApiProjectZipRoute
   '/api/viva-video': typeof ApiVivaVideoRoute
   '/lab/$slug': typeof LabSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -91,6 +99,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/api/project-zip': typeof ApiProjectZipRoute
   '/api/viva-video': typeof ApiVivaVideoRoute
   '/lab/$slug': typeof LabSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -104,6 +113,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/api/project-zip'
     | '/api/viva-video'
     | '/lab/$slug'
     | '/api/auth/$'
@@ -115,6 +125,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/api/project-zip'
     | '/api/viva-video'
     | '/lab/$slug'
     | '/api/auth/$'
@@ -126,6 +137,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/login'
+    | '/api/project-zip'
     | '/api/viva-video'
     | '/lab/$slug'
     | '/api/auth/$'
@@ -138,6 +150,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
+  ApiProjectZipRoute: typeof ApiProjectZipRoute
   ApiVivaVideoRoute: typeof ApiVivaVideoRoute
   LabSlugRoute: typeof LabSlugRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -161,6 +174,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/project-zip': {
+      id: '/api/project-zip'
+      path: '/api/project-zip'
+      fullPath: '/api/project-zip'
+      preLoaderRoute: typeof ApiProjectZipRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/viva-video': {
@@ -218,6 +238,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
+  ApiProjectZipRoute: ApiProjectZipRoute,
   ApiVivaVideoRoute: ApiVivaVideoRoute,
   LabSlugRoute: LabSlugRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
