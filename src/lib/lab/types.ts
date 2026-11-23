@@ -1,4 +1,4 @@
-export type Lang = "c" | "cpp" | "python";
+export type Lang = "c" | "cpp" | "python" | "java";
 
 export type Role = "admin" | "student";
 

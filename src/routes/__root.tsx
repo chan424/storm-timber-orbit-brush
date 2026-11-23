@@ -3,7 +3,7 @@ import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
 
-const APP_NAME = "DAA RGUKT ONGOLE LAB EVALUATION PORTAL";
+const APP_NAME = "RGUKT Labs";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -11,7 +11,7 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: APP_NAME },
-      { name: "description", content: "Lab evaluation for Design and Analysis of Algorithms at RGUKT Ongole." },
+      { name: "description", content: "RGUKT Ongole labs. Evaluate C, C++, Java, Python, CN, OS, SE, and DAA, and see the marks at once." },
       { name: "theme-color", content: "#1e4d45" },
     ],
     links: [

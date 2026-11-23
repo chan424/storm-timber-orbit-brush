@@ -19,7 +19,7 @@ function authHeaders(): Headers {
 export function VivaBank() {
   const [items, setItems] = useState<BankItem[]>([]);
   const [counts, setCounts] = useState({ oralCount: 0, mcqCount: 0 });
-  const [kind, setKind] = useState<"oral" | "mcq">("oral");
+  const [kind, setKind] = useState<"oral" | "mcq">("mcq");
   const [prompt, setPrompt] = useState("");
   const [choices, setChoices] = useState(["", "", "", ""]);
   const [answer, setAnswer] = useState(0);
@@ -72,7 +72,7 @@ export function VivaBank() {
         <div>
           <h2 className="font-serif text-2xl font-semibold">Viva bank</h2>
           <p className="mt-1 text-sm text-muted">
-            {counts.oralCount} spoken · {counts.mcqCount} choice. Each student is given 5 of each. Aim for about 60.
+            {counts.oralCount} spoken · {counts.mcqCount} choice. Every student is given all of these questions, each in a shuffled order. A choice question is 2 marks. A spoken question is marked 0, 1, or 2 after the recording is watched.
           </p>
         </div>
       </div>

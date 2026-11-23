@@ -3,9 +3,9 @@ import { exportMarks, listAll } from "@/lib/lab/api";
 import { VivaBank, VivaReview } from "@/components/lab/viva-admin";
 import type { AdminStudent } from "@/lib/lab/types";
 
-const LANG: Record<string, string> = { c: "C", cpp: "C++", python: "Python" };
+const LANG: Record<string, string> = { c: "C", cpp: "C++", java: "Java", python: "Python" };
 
-export function AdminBoard() {
+export function AdminBoard({ lab = "daa" }: { lab?: string }) {
   const [students, setStudents] = useState<AdminStudent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -16,7 +16,7 @@ export function AdminBoard() {
     setError("");
     setLoading(true);
     try {
-      setStudents(await listAll());
+      setStudents(await listAll({ data: { lab } }));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load the mark sheet.");
     } finally {
@@ -26,7 +26,7 @@ export function AdminBoard() {
 
   useEffect(() => {
     let cancelled = false;
-    listAll()
+    listAll({ data: { lab } })
       .then((rows) => {
         if (!cancelled) setStudents(rows);
       })
@@ -39,13 +39,13 @@ export function AdminBoard() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [lab]);
 
   async function onDownload() {
     setBusy(true);
     setError("");
     try {
-      const file = await exportMarks();
+      const file = await exportMarks({ data: { lab } });
       const blob = new Blob([file.xml], { type: "application/vnd.ms-excel" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -95,7 +95,7 @@ export function AdminBoard() {
         </div>
       </div>
       <p className="mt-3 text-sm text-muted">
-        Blank cells are not submitted. Programs are out of 50. Viva choices are out of 10 and appear when the student presses Save. Oral is out of 10 after you award the recordings. The sheet total is programs plus those viva marks. The 60 a student sees immediately is programs plus choices.
+        Blank cells are not submitted. Programs are out of 50. Each choice question is 2 marks and appears when the student presses Save. Spoken answers are marked after you watch the recordings. The sheet total is programs plus those viva marks.
       </p>
       {error ? (
         <p className="mt-4 text-sm text-danger" role="alert">
@@ -149,7 +149,7 @@ export function AdminBoard() {
                     <tr className="border-b border-line">
                       <td colSpan={9} className="bg-well px-4 py-4">
                         <div className="space-y-4">
-                          <VivaReview studentId={student.studentId} />
+                          {lab === "daa" ? <VivaReview studentId={student.studentId} /> : null}
                           {student.experiments.map((experiment) => (
                             <article key={experiment.experiment} className="rounded-md bg-sheet p-4">
                               <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -187,7 +187,7 @@ export function AdminBoard() {
           </table>
         </div>
       ) : null}
-      <VivaBank />
+      {lab === "daa" ? <VivaBank /> : null}
     </div>
   );
 }

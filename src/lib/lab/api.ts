@@ -2,6 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { authMiddleware } from "@/lib/auth/middleware";
 import { normalizeEmail, roleForEmail, studentIdFromEmail } from "@/lib/lab/access";
 import { authorshipComment, awardMarks } from "@/lib/lab/score";
+import { labForSlug } from "@/lib/lab/labs-api";
+import { isLabSlug } from "@/lib/lab/catalog";
 import type { AdminExperiment, AdminStudent, Issue, Lang, Submission } from "@/lib/lab/types";
 
 type Profile = {
@@ -124,8 +126,13 @@ export const getAccess = createServerFn({ method: "GET" })
   });
 
 export const listMine = createServerFn({ method: "GET" })
+  .validator((input: unknown) => {
+    const lab = input && typeof input === "object" && "lab" in input ? String((input as { lab?: unknown }).lab ?? "") : "daa";
+    if (!isLabSlug(lab)) throw new Error("Unknown lab.");
+    return { lab };
+  })
   .middleware([authMiddleware])
-  .handler(async ({ context }): Promise<Submission[]> => {
+  .handler(async ({ context, data }): Promise<Submission[]> => {
     const profile = await loadProfile(context.userId);
     requireStudent(profile);
     const { getSql } = await import("@/lib/db");
@@ -134,7 +141,7 @@ export const listMine = createServerFn({ method: "GET" })
       select student_id, email, experiment, aim, language, code, runs_ok, base_marks,
              ai_percent, human_percent, ai_comment, deducted, awarded_marks, diagnostics, updated_at
       from lab_submissions
-      where user_id = ${context.userId}
+      where user_id = ${context.userId} and lab = ${data.lab}
       order by experiment
     `;
     return rows.map(toSubmission);
@@ -147,26 +154,31 @@ export const runExperiment = createServerFn({ method: "POST" })
     const experiment = Number(body.experiment);
     const aim = String(body.aim ?? "").trim();
     const language = String(body.language ?? "");
+    const lab = String(body.lab ?? "daa");
     const code = String(body.code ?? "").replace(/\r\n/g, "\n");
+    if (!isLabSlug(lab)) throw new Error("Unknown lab.");
     if (![1, 2, 3, 4, 5].includes(experiment)) throw new Error("Choose experiment 1 to 5.");
     if (aim.length < 3) throw new Error("Write the aim of the experiment.");
     if (aim.length > 1000) throw new Error("The aim is too long.");
-    if (language !== "c" && language !== "cpp" && language !== "python") {
-      throw new Error("Choose C, C++, or Python.");
+    if (language !== "c" && language !== "cpp" && language !== "python" && language !== "java") {
+      throw new Error("Choose C, C++, Java, or Python.");
     }
     if (code.trim().length < 8) throw new Error("Paste the program.");
     if (code.length > 40000) throw new Error("The program is too long.");
-    return { experiment, aim, language: language as Lang, code };
+    return { lab, experiment, aim, language: language as Lang, code };
   })
   .middleware([authMiddleware])
   .handler(async ({ context, data }): Promise<Submission> => {
     const profile = await loadProfile(context.userId);
     requireStudent(profile);
+    const lab = await labForSlug(data.lab);
+    if (!lab) throw new Error("Unknown lab.");
+    const language = lab.chooseLanguage ? data.language : lab.language;
     const { getSql } = await import("@/lib/db");
     const sql = await getSql();
     const existing = await sql<{ updated_at: unknown }>`
       select updated_at from lab_submissions
-      where user_id = ${context.userId} and experiment = ${data.experiment}
+      where user_id = ${context.userId} and lab = ${lab.slug} and experiment = ${data.experiment}
     `;
     const previous = existing[0]?.updated_at;
     if (previous) {
@@ -178,9 +190,9 @@ export const runExperiment = createServerFn({ method: "POST" })
 
     const { traceProgram } = await import("./trace");
     const { reviewAuthorship } = await import("./ai-review");
-    const traced = traceProgram(data.code, data.language);
+    const traced = traceProgram(data.code, language);
     const review = await reviewAuthorship({
-      language: data.language,
+      language,
       aim: data.aim,
       code: data.code,
     });
@@ -196,16 +208,16 @@ export const runExperiment = createServerFn({ method: "POST" })
 
     const rows = await sql<SubmissionRow>`
       insert into lab_submissions (
-        user_id, student_id, email, experiment, aim, language, code,
+        user_id, student_id, email, lab, experiment, aim, language, code,
         runs_ok, base_marks, ai_percent, human_percent, ai_comment,
         deducted, awarded_marks, diagnostics, updated_at
       ) values (
-        ${context.userId}, ${profile.studentId}, ${profile.email}, ${data.experiment},
-        ${data.aim}, ${data.language}, ${data.code}, ${traced.ok}, ${scored.base},
+        ${context.userId}, ${profile.studentId}, ${profile.email}, ${lab.slug}, ${data.experiment},
+        ${data.aim}, ${language}, ${data.code}, ${traced.ok}, ${scored.base},
         ${review.aiPercent}, ${human}, ${comment}, ${scored.deducted}, ${scored.awarded},
         ${diagnostics}, now()
       )
-      on conflict (user_id, experiment) do update set
+      on conflict (user_id, lab, experiment) do update set
         student_id = excluded.student_id,
         email = excluded.email,
         aim = excluded.aim,
@@ -229,32 +241,41 @@ export const runExperiment = createServerFn({ method: "POST" })
   });
 
 export const listAll = createServerFn({ method: "GET" })
+  .validator((input: unknown) => sheetLab(input))
   .middleware([authMiddleware])
-  .handler(async ({ context }): Promise<AdminStudent[]> => {
+  .handler(async ({ context, data }): Promise<AdminStudent[]> => {
     const profile = await loadProfile(context.userId);
     requireAdmin(profile);
-    return loadSheet();
+    return loadSheet(data.lab);
   });
 
 export const exportMarks = createServerFn({ method: "GET" })
+  .validator((input: unknown) => sheetLab(input))
   .middleware([authMiddleware])
-  .handler(async ({ context }): Promise<{ filename: string; xml: string }> => {
+  .handler(async ({ context, data }): Promise<{ filename: string; xml: string }> => {
     const profile = await loadProfile(context.userId);
     requireAdmin(profile);
-    const students = await loadSheet();
+    const students = await loadSheet(data.lab);
     return {
-      filename: "DAA-RGUKT-Ongole-lab-marks.xls",
+      filename: `${data.lab}-rgukt-labs-marks.xls`,
       xml: marksWorkbook(students),
     };
   });
 
-async function loadSheet(): Promise<AdminStudent[]> {
+function sheetLab(input: unknown): { lab: string } {
+  const lab = input && typeof input === "object" && "lab" in input ? String((input as { lab?: unknown }).lab ?? "") : "daa";
+  if (!isLabSlug(lab)) throw new Error("Unknown lab.");
+  return { lab };
+}
+
+async function loadSheet(lab: string): Promise<AdminStudent[]> {
   const { getSql } = await import("@/lib/db");
   const sql = await getSql();
   const rows = await sql<SubmissionRow>`
     select student_id, email, experiment, aim, language, code, runs_ok, base_marks,
            ai_percent, human_percent, ai_comment, deducted, awarded_marks, diagnostics, updated_at
     from lab_submissions
+    where lab = ${lab}
     order by student_id, experiment
   `;
   const byId = new Map<string, AdminStudent>();
@@ -291,6 +312,7 @@ async function loadSheet(): Promise<AdminStudent[]> {
     student.experiments.push(detail);
   }
   const students = [...byId.values()];
+  if (lab === "daa") {
   const vivaRows = await sql<{ student_id: string; email: string; mcq: unknown; oral: unknown }>`
     select p.student_id, p.email,
       case when p.saved_at is null then null else (
@@ -324,6 +346,7 @@ async function loadSheet(): Promise<AdminStudent[]> {
     }
     student.vivaMcq = asInt(row.mcq);
     student.vivaOral = asInt(row.oral);
+  }
   }
   for (const student of students) {
     const programs = student.marks.reduce<number>((sum, mark) => sum + (mark ?? 0), 0);

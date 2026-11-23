@@ -46,6 +46,8 @@ export type VivaPaper = {
   saved: boolean;
   mcqMarks: number | null;
   oralMarks: number | null;
+  choiceMax: number;
+  oralMax: number;
   questions: VivaCard[];
 };
 
@@ -150,6 +152,12 @@ async function counts() {
   return { oralCount, mcqCount };
 }
 
+function sameIds(left: number[], right: number[]): boolean {
+  if (left.length !== right.length) return false;
+  const have = new Set(left);
+  return right.every((id) => have.has(id));
+}
+
 export const getViva = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async ({ context }): Promise<VivaPaper> => {
@@ -158,29 +166,22 @@ export const getViva = createServerFn({ method: "GET" })
     const { getSql } = await import("@/lib/db");
     const sql = await getSql();
     const bank = await counts();
+    const rows = await sql<{ id: number | string }>`select id from viva_questions order by id`;
+    const allIds = rows.map((row) => Number(row.id));
     const existing = await sql<{ question_ids: string; saved_at: unknown }>`
       select question_ids, saved_at from viva_papers where user_id = ${context.userId}
     `;
     let ids = parseIds(existing[0]?.question_ids ?? "");
-    if (!existing[0]) {
-      if (bank.oralCount < 5 || bank.mcqCount < 5) {
-        return { ready: false, ...bank, saved: false, mcqMarks: null, oralMarks: null, questions: [] };
-      }
-      const oral = await sql<{ id: number | string }>`select id from viva_questions where kind = 'oral'`;
-      const mcq = await sql<{ id: number | string }>`select id from viva_questions where kind = 'mcq'`;
-      ids = [
-        ...shuffle(oral.map((row) => Number(row.id))).slice(0, 5),
-        ...shuffle(mcq.map((row) => Number(row.id))).slice(0, 5),
-      ];
+    if (allIds.length === 0) {
+      return { ready: false, ...bank, saved: false, mcqMarks: null, oralMarks: null, choiceMax: 0, oralMax: 0, questions: [] };
+    }
+    if (!sameIds(ids, allIds)) {
+      ids = shuffle(allIds);
       await sql`
         insert into viva_papers (user_id, student_id, email, question_ids)
         values (${context.userId}, ${profile.studentId}, ${profile.email}, ${JSON.stringify(ids)})
-        on conflict (user_id) do nothing
+        on conflict (user_id) do update set question_ids = excluded.question_ids
       `;
-      const stored = await sql<{ question_ids: string }>`
-        select question_ids from viva_papers where user_id = ${context.userId}
-      `;
-      ids = parseIds(stored[0]?.question_ids ?? JSON.stringify(ids));
     }
     return loadPaper(context.userId, ids, existing[0]?.saved_at != null, bank);
   });
@@ -194,7 +195,7 @@ async function loadPaper(
   const { getSql } = await import("@/lib/db");
   const sql = await getSql();
   if (ids.length === 0) {
-    return { ready: false, ...bank, saved: false, mcqMarks: null, oralMarks: null, questions: [] };
+    return { ready: false, ...bank, saved: false, mcqMarks: null, oralMarks: null, choiceMax: 0, oralMax: 0, questions: [] };
   }
   const questions = await sql.query<QuestionRow>(
     `select id, kind, prompt, choices, answer from viva_questions where id in (${ids.map((_, i) => `$${i + 1}`).join(",")})`,
@@ -240,6 +241,8 @@ async function loadPaper(
     saved: savedFlag,
     mcqMarks: savedFlag ? mcqMarks : null,
     oralMarks: oralSet > 0 ? oralMarks : null,
+    choiceMax: cards.filter((card) => card.kind === "mcq").length * 2,
+    oralMax: cards.filter((card) => card.kind === "oral").length * 2,
     questions: cards,
   };
 }

@@ -1,4 +1,5 @@
-export const ADMIN_EMAIL = "dataongole@gmail.com";
+export const ADMIN_EMAIL = "ncs@rguktong.ac.in";
+export const ADMIN_EMAILS = ["ncs@rguktong.ac.in", "dataongole@gmail.com"] as const;
 export const STUDENT_DOMAIN = "rguktong.ac.in";
 
 export type PortalRole = "admin" | "student";
@@ -16,7 +17,7 @@ export function studentIdFromEmail(email: string): string {
 export function roleForEmail(email: string): PortalRole | null {
   const e = normalizeEmail(email);
   if (!e || e.includes(" ") || !e.includes("@")) return null;
-  if (e === ADMIN_EMAIL) return "admin";
+  if ((ADMIN_EMAILS as readonly string[]).includes(e)) return "admin";
   const [local, domain, ...rest] = e.split("@");
   if (!local || rest.length > 0 || domain !== STUDENT_DOMAIN) return null;
   if (!/^[a-z0-9][a-z0-9._+-]{0,63}$/.test(local)) return null;

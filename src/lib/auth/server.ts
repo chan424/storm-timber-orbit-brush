@@ -115,15 +115,39 @@ const baseURL = explicitBaseURL ?? {
 
 // Origins Better Auth accepts on credentialed POSTs (sign-up/sign-in, etc.).
 // Missing entries here surface as FORBIDDEN "Invalid origin".
-const trustedOrigins: string[] = explicitBaseURL
-  ? [explicitBaseURL, ...LOCAL_DEV_ORIGINS]
-  : [
-      // Host wildcards (matched against Origin's host)
-      ...previewAllowedHosts,
-      // Full-origin wildcards (matched against Origin)
-      ...previewAllowedHosts.flatMap((host) => [`https://${host}`, `http://${host}`]),
-      ...LOCAL_DEV_ORIGINS,
-    ];
+// A published custom domain is not the injected BETTER_AUTH_URL, so also trust
+// the host that actually received the request. Only that host, never an arbitrary Origin.
+function sameSiteOrigin(request?: Request): string | null {
+  if (!request) return null;
+  const raw = request.headers.get("origin");
+  if (!raw) return null;
+  let origin: URL;
+  try {
+    origin = new URL(raw);
+  } catch {
+    return null;
+  }
+  if (origin.protocol !== "https:" && origin.protocol !== "http:") return null;
+  const forwarded = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "";
+  const host = forwarded.split(",")[0]?.trim().toLowerCase().replace(/:\d+$/, "") ?? "";
+  if (!host || origin.hostname.toLowerCase() !== host) return null;
+  return origin.origin;
+}
+
+const trustedOrigins = async (request?: Request): Promise<string[]> => {
+  const list = explicitBaseURL
+    ? [explicitBaseURL, ...LOCAL_DEV_ORIGINS]
+    : [
+        // Host wildcards (matched against Origin's host)
+        ...previewAllowedHosts,
+        // Full-origin wildcards (matched against Origin)
+        ...previewAllowedHosts.flatMap((host) => [`https://${host}`, `http://${host}`]),
+        ...LOCAL_DEV_ORIGINS,
+      ];
+  const extra = sameSiteOrigin(request);
+  if (extra && !list.includes(extra)) list.push(extra);
+  return list;
+};
 
 const databaseUrl = env("DATABASE_URL");
 

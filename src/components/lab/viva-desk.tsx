@@ -18,7 +18,13 @@ function authHeaders(): Headers {
 export function VivaDesk({
   onScore,
 }: {
-  onScore: (score: { mcq: number | null; oral: number | null; saved: boolean }) => void;
+  onScore: (score: {
+    mcq: number | null;
+    oral: number | null;
+    saved: boolean;
+    choiceMax: number;
+    oralMax: number;
+  }) => void;
 }) {
   const [paper, setPaper] = useState<VivaPaper | null>(null);
   const [cursor, setCursor] = useState(0);
@@ -39,7 +45,13 @@ export function VivaDesk({
         const picked: Record<number, number | null> = {};
         for (const card of next.questions) picked[card.id] = card.selected;
         setChoices(picked);
-        onScoreRef.current({ mcq: next.mcqMarks, oral: next.oralMarks, saved: next.saved });
+        onScoreRef.current({
+          mcq: next.mcqMarks,
+          oral: next.oralMarks,
+          saved: next.saved,
+          choiceMax: next.choiceMax,
+          oralMax: next.oralMax,
+        });
       })
       .catch((err: unknown) => {
         if (!cancelled) setError(err instanceof Error ? err.message : "Could not open the viva.");
@@ -65,9 +77,15 @@ export function VivaDesk({
         },
       });
       setPaper(next);
-      onScore({ mcq: next.mcqMarks, oral: next.oralMarks, saved: next.saved });
+      onScore({
+        mcq: next.mcqMarks,
+        oral: next.oralMarks,
+        saved: next.saved,
+        choiceMax: next.choiceMax,
+        oralMax: next.oralMax,
+      });
       const shown = next.mcqMarks ?? 0;
-      setNote(`Saved. Viva choices are ${shown}/10, and that is included in the 60.`);
+      setNote(`Saved. Choice questions are ${shown}/${next.choiceMax}.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save.");
     } finally {
@@ -91,7 +109,7 @@ export function VivaDesk({
   if (!paper.ready || !card) {
     return (
       <p className="mt-8 rounded-xl border border-line bg-sheet p-6 text-sm text-muted">
-        The viva opens when the evaluation cell has published at least five spoken questions and five choice questions.
+        The viva opens when a question is in the bank. Every student gets all of them, in a different order.
         The bank has {paper.oralCount} spoken and {paper.mcqCount} choice questions.
       </p>
     );
@@ -106,7 +124,9 @@ export function VivaDesk({
           </p>
           <p className="font-serif text-2xl font-semibold">{card.kind === "oral" ? "Spoken answer" : "Choice question"}</p>
         </div>
-        <p className="text-sm text-muted">Each question is 2 marks. Five are recorded. Five are choices.</p>
+        <p className="text-sm text-muted">
+          Each question is 2 marks. This paper has {paper.questions.length} questions, in your own order.
+        </p>
       </div>
       <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
         {paper.questions.map((item, index) => {

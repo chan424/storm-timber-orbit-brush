@@ -2,25 +2,62 @@ import { useEffect, useState, type ReactNode } from "react";
 import { UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { LoginCard, Rules } from "@/components/lab/login-panel";
-import { AdminBoard } from "@/components/lab/admin-board";
-import { StudentDesk } from "@/components/lab/student-desk";
+import { Catalog } from "@/components/lab/catalog";
 import { getAccess } from "@/lib/lab/api";
 import type { Access } from "@/lib/lab/types";
 
+const BEARER_KEY = "grok-auth.bearer-token";
+
 export function PortalHome() {
+  const claiming = useGoogleHandoff();
   const { user, isPending } = useCurrentUserState();
-  if (isPending) return <Frame />;
+  if (claiming || isPending) {
+    return (
+      <Frame>
+        <p className="mt-8 text-sm text-muted">Signing in…</p>
+      </Frame>
+    );
+  }
   if (!user) {
     return (
-      <Frame wide>
-        <Intro />
-        <div className="mt-8 lg:mt-0">
+      <Frame>
+        <div className="mt-8 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
+          <Intro />
           <LoginCard />
         </div>
+        <Catalog role={null} />
       </Frame>
     );
   }
   return <SignedIn />;
+}
+
+function useGoogleHandoff(): boolean {
+  const [claiming, setClaiming] = useState(false);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("handoff");
+    if (!code) return;
+    setClaiming(true);
+    const finish = async () => {
+      try {
+        const response = await fetch("/api/lab/oauth-finish", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ code }),
+        });
+        const token = response.headers.get("set-auth-token");
+        if (token) sessionStorage.setItem(BEARER_KEY, token);
+      } catch {
+        /* The next load shows the sign-in form if the code was not accepted. */
+      }
+      const url = new URL(window.location.href);
+      url.searchParams.delete("handoff");
+      window.location.replace(`${url.pathname}${url.search}${url.hash}`);
+    };
+    void finish();
+  }, []);
+  return claiming;
 }
 
 function SignedIn() {
@@ -63,7 +100,7 @@ function SignedIn() {
   }
   return (
     <Frame>
-      {access.role === "admin" ? <AdminBoard /> : <StudentDesk studentId={access.studentId ?? access.email} />}
+      <Catalog role={access.role} />
     </Frame>
   );
 }
@@ -72,7 +109,7 @@ function Intro() {
   return (
     <div>
       <p className="max-w-xl text-base text-pretty text-muted">
-        Design and Analysis of Algorithms. Paste each experiment, run the trace, and keep the mark beside the program.
+        Eight labs. Paste the answer, press Evaluate, and the mark is saved on the sheet.
       </p>
       <Rules />
     </div>
@@ -88,7 +125,7 @@ function Frame({ children, wide = false }: { children?: ReactNode; wide?: boolea
           <div>
             <p className="text-sm font-semibold tracking-wide text-accent uppercase">RGUKT Ongole</p>
             <h1 className="mt-2 max-w-3xl font-serif text-3xl leading-tight font-semibold text-balance sm:text-4xl">
-              DAA RGUKT ONGOLE LAB EVALUATION PORTAL
+              RGUKT Labs
             </h1>
           </div>
           <UserButton />

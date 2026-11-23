@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { authClient, signIn } from "@/lib/auth/client";
 import { ADMIN_EMAIL, roleForEmail, studentIdFromEmail } from "@/lib/lab/access";
 
@@ -14,6 +14,39 @@ export function LoginCard({
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const [googlePending, setGooglePending] = useState(false);
+
+  useEffect(() => {
+    const errorCode = new URLSearchParams(window.location.search).get("error");
+    if (errorCode === "google" || errorCode === "state_mismatch") {
+      setError("Google did not finish. Choose the college account, the one ending in @rguktong.ac.in, and try once.");
+    }
+  }, []);
+
+  async function onGoogle() {
+    setError("");
+    setGooglePending(true);
+    try {
+      const here = window.location.host;
+      const info = (await fetch("/api/lab/oauth-origin").then((response) => response.json())) as { origin?: string };
+      const canonical = info.origin?.replace(/\/+$/, "") ?? "";
+      let canonicalHost = "";
+      try {
+        canonicalHost = canonical ? new URL(canonical).host : "";
+      } catch {
+        canonicalHost = "";
+      }
+      if (canonicalHost && canonicalHost !== here) {
+        const back = window.location.origin;
+        window.location.assign(`${canonical}/api/lab/oauth-start?return=${encodeURIComponent(back)}`);
+        return;
+      }
+      await signIn("grok-google", { callbackURL: "/" });
+    } catch (err) {
+      setGooglePending(false);
+      setError(err instanceof Error ? err.message : "Google sign-in failed.");
+    }
+  }
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -29,8 +62,6 @@ export function LoginCard({
     }
     setPending(true);
     try {
-      sessionStorage.removeItem(BEARER_KEY);
-      await authClient.signOut().catch(() => undefined);
       sessionStorage.removeItem(BEARER_KEY);
       let token: string | null = null;
       const options = {
@@ -56,7 +87,7 @@ export function LoginCard({
         if (signInError) throw new Error(signInError.message || "Could not sign in.");
       }
       if (token) sessionStorage.setItem(BEARER_KEY, token);
-      window.location.assign("/");
+      window.location.replace("/");
     } catch (err) {
       setPending(false);
       setError(err instanceof Error ? err.message : "Could not sign in.");
@@ -67,20 +98,26 @@ export function LoginCard({
     <div className="rounded-xl border border-line bg-sheet p-5 sm:p-6">
       <h2 className="font-serif text-2xl font-semibold text-balance">Sign in</h2>
       <p className="mt-2 text-sm text-pretty text-muted">
-        Students use their RGUKT Ongole mail. The evaluation cell signs in as {ADMIN_EMAIL}.
+        Students sign in with their college Google account, the one ending in @rguktong.ac.in. The evaluation cell can use {ADMIN_EMAIL}.
       </p>
       {signedInAs ? (
         <p className="mt-4 rounded-md bg-warn-soft px-3 py-2 text-sm text-warn" role="status">
-          Signed in as {signedInAs}. That address is not on the lab roll. Use a college ID below.
+          Signed in as {signedInAs}. That is not a college ID. Use the @rguktong.ac.in Google account, not a personal Gmail.
         </p>
       ) : null}
       <button
         type="button"
-        onClick={() => void signIn("grok-google", { callbackURL: "/" })}
-        className="mt-5 flex h-11 w-full items-center justify-center rounded-md border border-line bg-sheet px-4 text-sm font-semibold text-ink transition-opacity hover:opacity-80"
+        onClick={() => void onGoogle()}
+        disabled={googlePending || pending}
+        className="mt-5 flex h-11 w-full items-center justify-center rounded-md border border-line bg-sheet px-4 text-sm font-semibold text-ink transition-opacity hover:opacity-80 disabled:opacity-50"
       >
-        Continue with Google
+        {googlePending ? "Opening Google…" : "Continue with college Google"}
       </button>
+      {error ? (
+        <p className="mt-3 text-sm text-danger" role="alert">
+          {error}
+        </p>
+      ) : null}
       <p className="my-4 text-center text-xs font-medium tracking-wide text-muted uppercase">or email and password</p>
       <form onSubmit={onSubmit} className="space-y-4">
         <label className="block text-sm font-medium" htmlFor="lab-email">
@@ -109,11 +146,6 @@ export function LoginCard({
             className="mt-1 h-11 w-full rounded-md border border-line bg-sheet px-3 text-base text-ink outline-none"
           />
         </label>
-        {error ? (
-          <p className="text-sm text-danger" role="alert">
-            {error}
-          </p>
-        ) : null}
         <button
           type="submit"
           disabled={pending}
@@ -153,7 +185,7 @@ export function Rules() {
       </li>
       <li className="flex gap-3">
         <span className="font-mono text-xs text-accent">04</span>
-        The total on screen is programs plus the viva choices, out of 60. Oral answers are 10 more, marked after the recordings are watched.
+        The total on screen is the five programs plus every saved choice question, 2 marks each. Spoken answers are marked later, after the recordings are watched.
       </li>
     </ol>
   );

@@ -12,7 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ApiVivaVideoRouteImport } from './routes/api/viva-video'
+import { Route as LabSlugRouteImport } from './routes/lab/$slug'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiLabOauthDoneRouteImport } from './routes/api/lab/oauth-done'
+import { Route as ApiLabOauthFinishRouteImport } from './routes/api/lab/oauth-finish'
+import { Route as ApiLabOauthOriginRouteImport } from './routes/api/lab/oauth-origin'
+import { Route as ApiLabOauthStartRouteImport } from './routes/api/lab/oauth-start'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -29,9 +34,34 @@ const ApiVivaVideoRoute = ApiVivaVideoRouteImport.update({
   path: '/api/viva-video',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LabSlugRoute = LabSlugRouteImport.update({
+  id: '/lab/$slug',
+  path: '/lab/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLabOauthDoneRoute = ApiLabOauthDoneRouteImport.update({
+  id: '/api/lab/oauth-done',
+  path: '/api/lab/oauth-done',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLabOauthFinishRoute = ApiLabOauthFinishRouteImport.update({
+  id: '/api/lab/oauth-finish',
+  path: '/api/lab/oauth-finish',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLabOauthOriginRoute = ApiLabOauthOriginRouteImport.update({
+  id: '/api/lab/oauth-origin',
+  path: '/api/lab/oauth-origin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLabOauthStartRoute = ApiLabOauthStartRouteImport.update({
+  id: '/api/lab/oauth-start',
+  path: '/api/lab/oauth-start',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -39,34 +69,82 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/api/viva-video': typeof ApiVivaVideoRoute
+  '/lab/$slug': typeof LabSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/lab/oauth-done': typeof ApiLabOauthDoneRoute
+  '/api/lab/oauth-finish': typeof ApiLabOauthFinishRoute
+  '/api/lab/oauth-origin': typeof ApiLabOauthOriginRoute
+  '/api/lab/oauth-start': typeof ApiLabOauthStartRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/api/viva-video': typeof ApiVivaVideoRoute
+  '/lab/$slug': typeof LabSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/lab/oauth-done': typeof ApiLabOauthDoneRoute
+  '/api/lab/oauth-finish': typeof ApiLabOauthFinishRoute
+  '/api/lab/oauth-origin': typeof ApiLabOauthOriginRoute
+  '/api/lab/oauth-start': typeof ApiLabOauthStartRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/api/viva-video': typeof ApiVivaVideoRoute
+  '/lab/$slug': typeof LabSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/lab/oauth-done': typeof ApiLabOauthDoneRoute
+  '/api/lab/oauth-finish': typeof ApiLabOauthFinishRoute
+  '/api/lab/oauth-origin': typeof ApiLabOauthOriginRoute
+  '/api/lab/oauth-start': typeof ApiLabOauthStartRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/api/viva-video' | '/api/auth/$'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/api/viva-video'
+    | '/lab/$slug'
+    | '/api/auth/$'
+    | '/api/lab/oauth-done'
+    | '/api/lab/oauth-finish'
+    | '/api/lab/oauth-origin'
+    | '/api/lab/oauth-start'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/api/viva-video' | '/api/auth/$'
-  id: '__root__' | '/' | '/login' | '/api/viva-video' | '/api/auth/$'
+  to:
+    | '/'
+    | '/login'
+    | '/api/viva-video'
+    | '/lab/$slug'
+    | '/api/auth/$'
+    | '/api/lab/oauth-done'
+    | '/api/lab/oauth-finish'
+    | '/api/lab/oauth-origin'
+    | '/api/lab/oauth-start'
+  id:
+    | '__root__'
+    | '/'
+    | '/login'
+    | '/api/viva-video'
+    | '/lab/$slug'
+    | '/api/auth/$'
+    | '/api/lab/oauth-done'
+    | '/api/lab/oauth-finish'
+    | '/api/lab/oauth-origin'
+    | '/api/lab/oauth-start'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
   ApiVivaVideoRoute: typeof ApiVivaVideoRoute
+  LabSlugRoute: typeof LabSlugRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiLabOauthDoneRoute: typeof ApiLabOauthDoneRoute
+  ApiLabOauthFinishRoute: typeof ApiLabOauthFinishRoute
+  ApiLabOauthOriginRoute: typeof ApiLabOauthOriginRoute
+  ApiLabOauthStartRoute: typeof ApiLabOauthStartRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -92,11 +170,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiVivaVideoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lab/$slug': {
+      id: '/lab/$slug'
+      path: '/lab/$slug'
+      fullPath: '/lab/$slug'
+      preLoaderRoute: typeof LabSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/lab/oauth-done': {
+      id: '/api/lab/oauth-done'
+      path: '/api/lab/oauth-done'
+      fullPath: '/api/lab/oauth-done'
+      preLoaderRoute: typeof ApiLabOauthDoneRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/lab/oauth-finish': {
+      id: '/api/lab/oauth-finish'
+      path: '/api/lab/oauth-finish'
+      fullPath: '/api/lab/oauth-finish'
+      preLoaderRoute: typeof ApiLabOauthFinishRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/lab/oauth-origin': {
+      id: '/api/lab/oauth-origin'
+      path: '/api/lab/oauth-origin'
+      fullPath: '/api/lab/oauth-origin'
+      preLoaderRoute: typeof ApiLabOauthOriginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/lab/oauth-start': {
+      id: '/api/lab/oauth-start'
+      path: '/api/lab/oauth-start'
+      fullPath: '/api/lab/oauth-start'
+      preLoaderRoute: typeof ApiLabOauthStartRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -106,7 +219,12 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
   ApiVivaVideoRoute: ApiVivaVideoRoute,
+  LabSlugRoute: LabSlugRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiLabOauthDoneRoute: ApiLabOauthDoneRoute,
+  ApiLabOauthFinishRoute: ApiLabOauthFinishRoute,
+  ApiLabOauthOriginRoute: ApiLabOauthOriginRoute,
+  ApiLabOauthStartRoute: ApiLabOauthStartRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

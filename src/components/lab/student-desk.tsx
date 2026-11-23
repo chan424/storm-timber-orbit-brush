@@ -3,6 +3,7 @@ import { CodeEditor } from "@/components/lab/code-editor";
 import { VivaDesk } from "@/components/lab/viva-desk";
 import { listMine, runExperiment } from "@/lib/lab/api";
 import { getViva } from "@/lib/lab/viva-api";
+import type { LabDef } from "@/lib/lab/catalog";
 import type { Lang, Submission } from "@/lib/lab/types";
 
 type Slot = {
@@ -16,35 +17,44 @@ type Slot = {
 const LANGS: { id: Lang; label: string }[] = [
   { id: "c", label: "C" },
   { id: "cpp", label: "C++" },
+  { id: "java", label: "Java" },
   { id: "python", label: "Python" },
 ];
 
-function blankSlots(): Slot[] {
-  return [1, 2, 3, 4, 5].map((experiment) => ({
-    experiment,
-    aim: "",
-    language: "python",
+function blankSlots(lab: LabDef): Slot[] {
+  return lab.aims.map((aim, index) => ({
+    experiment: index + 1,
+    aim,
+    language: lab.language,
     code: "",
     saved: null,
   }));
 }
 
-export function StudentDesk({ studentId }: { studentId: string }) {
-  const [slots, setSlots] = useState<Slot[]>(blankSlots);
+export function StudentDesk({ studentId, lab }: { studentId: string; lab: LabDef }) {
+  const [slots, setSlots] = useState<Slot[]>(() => blankSlots(lab));
   const [current, setCurrent] = useState(1);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
   const [desk, setDesk] = useState<"programs" | "viva">("programs");
-  const [viva, setViva] = useState<{ mcq: number | null; oral: number | null; saved: boolean }>({
+  const [viva, setViva] = useState<{
+    mcq: number | null;
+    oral: number | null;
+    saved: boolean;
+    choiceMax: number;
+    oralMax: number;
+  }>({
     mcq: null,
     oral: null,
     saved: false,
+    choiceMax: 0,
+    oralMax: 0,
   });
 
   useEffect(() => {
     let cancelled = false;
-    listMine()
+    listMine({ data: { lab: lab.slug } })
       .then((rows) => {
         if (cancelled) return;
         setSlots((prev) =>
@@ -70,24 +80,34 @@ export function StudentDesk({ studentId }: { studentId: string }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [lab.slug]);
 
   useEffect(() => {
+    if (!lab.viva) return;
     let cancelled = false;
     getViva()
       .then((next) => {
-        if (!cancelled) setViva({ mcq: next.mcqMarks, oral: next.oralMarks, saved: next.saved });
+        if (!cancelled) {
+          setViva({
+            mcq: next.mcqMarks,
+            oral: next.oralMarks,
+            saved: next.saved,
+            choiceMax: next.choiceMax,
+            oralMax: next.oralMax,
+          });
+        }
       })
       .catch(() => undefined);
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [lab.viva]);
 
   const slot = slots[current - 1] ?? slots[0];
   if (!slot) return null;
   const programs = slots.reduce((sum, item) => sum + (item.saved?.awardedMarks ?? 0), 0);
-  const shown = programs + (viva.saved ? (viva.mcq ?? 0) : 0);
+  const shown = programs + (lab.viva && viva.saved ? (viva.mcq ?? 0) : 0);
+  const shownMax = 50 + (lab.viva ? viva.choiceMax : 0);
 
   function update(patch: Partial<Slot>) {
     setSlots((prev) => prev.map((item) => (item.experiment === current ? { ...item, ...patch } : item)));
@@ -101,8 +121,9 @@ export function StudentDesk({ studentId }: { studentId: string }) {
         data: {
           experiment: slot.experiment,
           aim: slot.aim,
-          language: slot.language,
+          language: lab.chooseLanguage ? slot.language : lab.language,
           code: slot.code,
+          lab: lab.slug,
         },
       });
       setSlots((prev) =>
@@ -129,15 +150,20 @@ export function StudentDesk({ studentId }: { studentId: string }) {
         <div className="text-right">
           <p className="font-serif text-3xl font-semibold tabular-nums">
             {shown}
-            <span className="text-lg font-medium text-muted"> / 60</span>
+            <span className="text-lg font-medium text-muted"> / {shownMax}</span>
           </p>
           <p className="text-sm text-muted">
             Programs {programs}/50
-            {viva.saved ? ` · choices ${viva.mcq ?? 0}/10` : " · choices not saved"}
-            {viva.oral == null ? " · oral not marked" : ` · oral ${viva.oral}/10`}
+            {viva.choiceMax === 0 || !lab.viva
+              ? ""
+              : viva.saved
+                ? ` · choices ${viva.mcq ?? 0}/${viva.choiceMax}`
+                : ` · choices not saved (out of ${viva.choiceMax})`}
+            {lab.viva && viva.oralMax === 0 ? "" : lab.viva && viva.oral == null ? " · oral not marked" : lab.viva ? ` · oral ${viva.oral}/${viva.oralMax}` : ""}
           </p>
         </div>
       </div>
+      {lab.viva ? (
       <div className="mt-4 grid grid-cols-2 gap-1 rounded-md bg-well p-1 sm:flex sm:w-fit" role="tablist">
         <button
           type="button"
@@ -158,8 +184,9 @@ export function StudentDesk({ studentId }: { studentId: string }) {
           Viva
         </button>
       </div>
-      {desk === "viva" ? <VivaDesk onScore={setViva} /> : null}
-      {desk === "programs" ? (
+      ) : null}
+      {desk === "viva" && lab.viva ? <VivaDesk onScore={setViva} /> : null}
+      {desk === "programs" || !lab.viva ? (
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
         <section aria-label="Experiments" className="flex gap-3 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible">
@@ -207,8 +234,9 @@ export function StudentDesk({ studentId }: { studentId: string }) {
             <div>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm font-semibold">3. Program</p>
+                {lab.chooseLanguage ? (
                 <div role="radiogroup" aria-label="Language" className="flex rounded-md border border-line p-1">
-                  {LANGS.map((lang) => {
+                  {LANGS.filter((lang) => lang.id !== "java").map((lang) => {
                     const active = slot.language === lang.id;
                     return (
                       <button
@@ -226,6 +254,9 @@ export function StudentDesk({ studentId }: { studentId: string }) {
                     );
                   })}
                 </div>
+                ) : (
+                  <p className="text-sm font-medium text-muted">{LANGS.find((lang) => lang.id === lab.language)?.label}</p>
+                )}
               </div>
               <div className="mt-2">
                 <CodeEditor value={slot.code} onChange={(code) => update({ code })} />
@@ -242,10 +273,10 @@ export function StudentDesk({ studentId }: { studentId: string }) {
               disabled={running || loading}
               className="flex h-11 items-center justify-center rounded-md bg-accent px-6 text-sm font-semibold text-accent-fg transition-opacity hover:opacity-90 disabled:opacity-50"
             >
-              {running ? "Tracing…" : "Run"}
+              {running ? "Evaluating…" : "Evaluate"}
             </button>
             <p className="text-sm text-pretty text-muted">
-              Run traces syntax and the errors that would stop a compiler or interpreter, then estimates how much of the code was written by AI. It does not execute the program.
+              Evaluate checks the program and the AI share, then shows the mark here. It does not execute the program.
             </p>
             {slot.saved ? <Result saved={slot.saved} /> : null}
           </div>

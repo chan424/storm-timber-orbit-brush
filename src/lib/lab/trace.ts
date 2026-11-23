@@ -50,7 +50,9 @@ export function traceProgram(raw: string, language: Lang): TraceResult {
     });
   }
 
-  if (language === "python") {
+  if (language === "java") {
+    issues.push(...javaSurface(code));
+  } else if (language === "python") {
     issues.push(...pythonSurface(code));
     issues.push(...parserIssues(pythonParser, code));
     if (!issues.some((issue) => /syntax|string is not closed|print is a function|looks like/i.test(issue.message))) {
@@ -78,14 +80,57 @@ function finish(ok: boolean, issues: Issue[], language: Lang): TraceResult {
   const summary =
     language === "python"
       ? "Syntax is valid and the names that were checked are defined. An interpreter would start this program."
-      : "Syntax is valid, main is present, and the library calls that were checked have their headers. A compiler would accept this program to run.";
+      : language === "java"
+        ? "The class is balanced and a Java compiler could start this program."
+        : "Syntax is valid, main is present, and the library calls that were checked have their headers. A compiler would accept this program to run.";
   return { ok: true, issues: [], summary };
 }
 
 function label(language: Lang): string {
   if (language === "cpp") return "C++";
   if (language === "c") return "C";
+  if (language === "java") return "Java";
   return "Python";
+}
+
+function javaSurface(code: string): Issue[] {
+  const issues: Issue[] = [];
+  if (!/\bclass\s+[A-Za-z_]\w*/.test(code)) {
+    issues.push({ line: 1, message: "A Java program needs a class declaration." });
+  }
+  if (!/\b(public\s+)?static\s+void\s+main\s*\(/.test(code) && !/\bvoid\s+main\s*\(/.test(code)) {
+    issues.push({ line: 1, message: "Add a main method so the program has a place to start." });
+  }
+  let depth = 0;
+  let line = 1;
+  let quote: '"' | "'" | null = null;
+  for (let i = 0; i < code.length; i += 1) {
+    const ch = code[i];
+    if (ch === "\n") line += 1;
+    if (quote) {
+      if (ch === "\\") {
+        i += 1;
+        continue;
+      }
+      if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      continue;
+    }
+    if (ch === "{") depth += 1;
+    if (ch === "}") {
+      depth -= 1;
+      if (depth < 0) {
+        issues.push({ line, message: "A closing brace has no matching opening brace." });
+        depth = 0;
+      }
+    }
+  }
+  if (quote) issues.push({ line, message: "A string is not closed." });
+  if (depth > 0) issues.push({ line, message: "A brace is still open at the end of the program." });
+  return issues;
 }
 
 function dedupe(issues: Issue[]): Issue[] {
