@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { authClient, signIn } from "@/lib/auth/client";
-import { ADMIN_EMAIL, roleForEmail, studentIdFromEmail } from "@/lib/lab/access";
+import { roleForEmail, studentIdFromEmail } from "@/lib/lab/access";
 
 const BEARER_KEY = "grok-auth.bearer-token";
 
@@ -53,7 +53,7 @@ export function LoginCard({
     setError("");
     const nextEmail = email.trim().toLowerCase();
     if (!roleForEmail(nextEmail)) {
-      setError(`Use a college ID such as o234747@rguktong.ac.in (o21, o22, or o23), or ${ADMIN_EMAIL} for the admin.`);
+      setError("Use a college ID such as o234747@rguktong.ac.in. The ID must start with o21, o22, or o23.");
       return;
     }
     if (password.length < 7) {
@@ -98,7 +98,7 @@ export function LoginCard({
     <div className="rounded-xl border border-line bg-sheet p-5 sm:p-6">
       <h2 className="font-serif text-2xl font-semibold text-balance">Sign in</h2>
       <p className="mt-2 text-sm text-pretty text-muted">
-        Sign in with the college Gmail account. Google must show an @rguktong.ac.in address. Student IDs start with o21, o22, or o23. The admin is {ADMIN_EMAIL}.
+        Sign in with the college Gmail account. Only an @rguktong.ac.in address is accepted. Student IDs start with o21, o22, or o23.
       </p>
       {signedInAs ? (
         <p className="mt-4 rounded-md bg-warn-soft px-3 py-2 text-sm text-warn" role="status">

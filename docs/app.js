@@ -120,7 +120,7 @@ function renderHome(who) {
         ${who ? tabBar() : ""}
         <div class="labs">${list}</div>
       </section>
-      ${who ? `<aside class="card"><h2>Signed in</h2><p class="muted">${esc(who.email)}</p><p class="muted">${who.role === "admin" ? "Use Edit on a lab to change its name or experiments." : "Open a lab and press Evaluate. The mark appears on that experiment."}</p></aside>` : signInCard()}
+      ${who ? `<aside class="card"><h2>Signed in</h2><p class="muted">${esc(who.email)}</p><p class="muted">${who.role === "admin" ? "Use Edit to change a lab." : "Open a lab and press Evaluate. The mark appears on that experiment."}</p></aside>` : signInCard()}
     </div>`;
   bindHome();
 }
@@ -128,7 +128,7 @@ function renderHome(who) {
 function signInCard() {
   return `<div class="card stack">
     <h2>Sign in</h2>
-    <p class="muted">Sign in with Gmail. Only an @rguktong.ac.in account is accepted. Student IDs start with o21, o22, or o23. The admin is ncs@rguktong.ac.in.</p>
+    <p class="muted">Sign in with Gmail. Only an @rguktong.ac.in account is accepted. Student IDs start with o21, o22, or o23.</p>
     <button id="google" class="primary" type="button">Sign in with Gmail</button>
     <p id="sign-error" class="error" hidden></p>
     <form id="signin" class="stack">
@@ -257,7 +257,7 @@ function bindHome() {
         return;
       }
       error.hidden = false;
-      error.textContent = "Students and the admin must use Sign in with Gmail. The tester password is test@rguktong.ac.in / test123.";
+      error.textContent = "College accounts sign in with Gmail. The tester sign-in is test@rguktong.ac.in and test123.";
     });
     document.querySelector("#google").addEventListener("click", () => {
       const back = location.origin + location.pathname.replace(/\/$/, "");
