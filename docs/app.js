@@ -126,15 +126,18 @@ function renderHome(who) {
 }
 
 function signInCard() {
-  return `<form id="signin" class="card stack">
+  return `<div class="card stack">
     <h2>Sign in</h2>
-    <p class="muted">College IDs start with o21, o22, or o23, for example o234747@rguktong.ac.in. The admin is ncs@rguktong.ac.in. Testers can use test@rguktong.ac.in and test123.</p>
-    <button id="google" class="ghost" type="button">Continue with college Google</button>
-    <label>Email<input id="email" type="email" required placeholder="o234747@rguktong.ac.in" /></label>
-    <label>Password<input id="password" type="password" required minlength="7" /></label>
+    <p class="muted">Sign in with Gmail. Only an @rguktong.ac.in account is accepted. Student IDs start with o21, o22, or o23. The admin is ncs@rguktong.ac.in.</p>
+    <button id="google" class="primary" type="button">Sign in with Gmail</button>
     <p id="sign-error" class="error" hidden></p>
-    <button class="primary" type="submit">Sign in</button>
-  </form>`;
+    <form id="signin" class="stack">
+      <p class="muted">Tester only: test@rguktong.ac.in and test123.</p>
+      <label>Email<input id="email" type="email" required placeholder="test@rguktong.ac.in" /></label>
+      <label>Password<input id="password" type="password" required minlength="7" /></label>
+      <button class="ghost" type="submit">Sign in as tester</button>
+    </form>
+  </div>`;
 }
 
 function tabBar() {
@@ -248,13 +251,13 @@ function bindHome() {
         render();
         return;
       }
-      if (!role) {
+      if (!role || !email.endsWith("@rguktong.ac.in")) {
         error.hidden = false;
-        error.textContent = "Use an o21, o22, or o23 college ID, ncs@rguktong.ac.in, or the test account.";
+        error.textContent = "Use the college Gmail account, an @rguktong.ac.in address such as o234747@rguktong.ac.in.";
         return;
       }
       error.hidden = false;
-      error.textContent = "Students and the admin sign in with college Google. The password test account is test@rguktong.ac.in / test123.";
+      error.textContent = "Students and the admin must use Sign in with Gmail. The tester password is test@rguktong.ac.in / test123.";
     });
     document.querySelector("#google").addEventListener("click", () => {
       const back = location.origin + location.pathname.replace(/\/$/, "");
@@ -427,7 +430,8 @@ if (handoff) {
   })
     .then((response) => response.json())
     .then((data) => {
-      if (data.email && data.role) setSession({ email: data.email, role: data.role });
+      const email = String(data.email || "").toLowerCase();
+      if (email.endsWith("@rguktong.ac.in") && data.role) setSession({ email, role: data.role });
     })
     .catch(() => undefined)
     .finally(() => {

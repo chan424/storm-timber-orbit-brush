@@ -191,7 +191,7 @@ const grokOAuthPlugin = authConfigured
         // broker session. Combined with the broker sending Google
         // `prompt=select_account`, the user always gets the account chooser
         // and can pick (or switch) which account to sign in with.
-        authorizationUrlParams: { idp, prompt: "login" },
+        authorizationUrlParams: { idp, prompt: "login", hd: "rguktong.ac.in" },
       })),
     })
   : null;

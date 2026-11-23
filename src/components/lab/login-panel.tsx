@@ -98,7 +98,7 @@ export function LoginCard({
     <div className="rounded-xl border border-line bg-sheet p-5 sm:p-6">
       <h2 className="font-serif text-2xl font-semibold text-balance">Sign in</h2>
       <p className="mt-2 text-sm text-pretty text-muted">
-        College Google accounts ending in @rguktong.ac.in can sign in when the ID starts with o21, o22, or o23. The admin is {ADMIN_EMAIL}. Testers can use test@rguktong.ac.in.
+        Sign in with the college Gmail account. Google must show an @rguktong.ac.in address. Student IDs start with o21, o22, or o23. The admin is {ADMIN_EMAIL}.
       </p>
       {signedInAs ? (
         <p className="mt-4 rounded-md bg-warn-soft px-3 py-2 text-sm text-warn" role="status">
@@ -111,7 +111,7 @@ export function LoginCard({
         disabled={googlePending || pending}
         className="mt-5 flex h-11 w-full items-center justify-center rounded-md border border-line bg-sheet px-4 text-sm font-semibold text-ink transition-opacity hover:opacity-80 disabled:opacity-50"
       >
-        {googlePending ? "Opening Google…" : "Continue with college Google"}
+        {googlePending ? "Opening Gmail…" : "Sign in with Gmail"}
       </button>
       {error ? (
         <p className="mt-3 text-sm text-danger" role="alert">

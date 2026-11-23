@@ -73,7 +73,9 @@ export async function startGoogle(request: Request): Promise<Response> {
   }
   const body = (await apiRes.json().catch(() => null)) as { url?: string } | null;
   if (!body?.url) return Response.redirect(`${back}/?error=google`, 302);
-  const headers = new Headers({ location: body.url, "cache-control": "no-store" });
+  const next = new URL(body.url);
+  next.searchParams.set("hd", "rguktong.ac.in");
+  const headers = new Headers({ location: next.toString(), "cache-control": "no-store" });
   for (const cookie of apiRes.headers.getSetCookie()) headers.append("set-cookie", cookie);
   return new Response(null, { status: 302, headers });
 }
