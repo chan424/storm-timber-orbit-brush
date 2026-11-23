@@ -27,19 +27,6 @@ export function LoginCard({
     setError("");
     setGooglePending(true);
     try {
-      const here = window.location.host;
-      const info = (await fetch("/api/lab/oauth-origin").then((response) => response.json())) as { origin?: string };
-      const canonical = info.origin?.replace(/\/+$/, "") ?? "";
-      let canonicalHost = "";
-      try {
-        canonicalHost = canonical ? new URL(canonical).host : "";
-      } catch {
-        canonicalHost = "";
-      }
-      if (canonicalHost && canonicalHost !== here) {
-        window.location.assign(`${canonical}/api/lab/oauth-start?return=${encodeURIComponent("https://dataong.in")}`);
-        return;
-      }
       await signIn("grok-google", { callbackURL: "/" });
     } catch (err) {
       setGooglePending(false);

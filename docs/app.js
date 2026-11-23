@@ -140,6 +140,53 @@ function signInCard() {
   </div>`;
 }
 
+const GOOGLE_CLIENT_ID = "455662147616-94fgovgphqlm6hgeimee7hgleu50lvd3.apps.googleusercontent.com";
+
+function startGmail() {
+  const error = document.querySelector("#sign-error");
+  const show = (text) => {
+    if (!error) return;
+    error.hidden = false;
+    error.textContent = text;
+  };
+  const google = window.google;
+  if (!google?.accounts?.oauth2) {
+    show("Gmail is still loading. Click Sign in with Gmail again.");
+    return;
+  }
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: "openid email profile",
+    callback: (response) => {
+      if (!response || response.error || !response.access_token) {
+        show("Gmail did not finish. Choose the college account and try again.");
+        return;
+      }
+      fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+        headers: { Authorization: "Bearer " + response.access_token },
+      })
+        .then((result) => result.json())
+        .then((info) => {
+          const email = String(info.email || "").toLowerCase();
+          const domain = String(info.hd || email.split("@")[1] || "");
+          if (domain !== "rguktong.ac.in" || !email.endsWith("@rguktong.ac.in")) {
+            show("Only a Gmail account on rguktong.ac.in can sign in.");
+            return;
+          }
+          const role = roleFor(email);
+          if (!role) {
+            show("Use an o21, o22, or o23 college ID.");
+            return;
+          }
+          setSession({ email, role });
+          render();
+        })
+        .catch(() => show("Could not confirm the Gmail account."));
+    },
+  });
+  client.requestAccessToken({ prompt: "select_account" });
+}
+
 function tabBar() {
   return `<div class="row" role="tablist">
     <button type="button" class="ghost" data-tab="labs">Labs</button>
@@ -260,7 +307,7 @@ function bindHome() {
       error.textContent = "College accounts sign in with Gmail. The tester sign-in is test@rguktong.ac.in and test123.";
     });
     document.querySelector("#google").addEventListener("click", () => {
-      location.assign("https://storm-timber-orbit-brush.grok.me/api/lab/oauth-start?return=" + encodeURIComponent("https://dataong.in"));
+      startGmail();
     });
   }
   document.querySelectorAll("[data-tab]").forEach((button) => {
